@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/ScriptedPranav/rss-aggregator/internal/database"
@@ -81,23 +80,28 @@ func databaseFeedFollowstoFeedFollows(dbFeedFollows []database.FeedFollow) []Fee
 }
 
 type Post struct {
-	ID          uuid.UUID      `json:"id"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	Title       string         `json:"title"`
-	Description sql.NullString `json:"description"`
-	PublishedAt time.Time      `json:"published_at"`
-	Url         string         `json:"url"`
-	FeedID      uuid.UUID      `json:"feed_id"`
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Title       string    `json:"title"`
+	//Unmarshalling null string in json becomes ""
+	Description *string   `json:"description"`
+	PublishedAt time.Time `json:"published_at"`
+	Url         string    `json:"url"`
+	FeedID      uuid.UUID `json:"feed_id"`
 }
 
 func databasePostToPost(dbPost database.Post) Post {
+	var description *string
+	if dbPost.Description.Valid {
+		description = &dbPost.Description.String
+	}
 	return Post{
 		ID:          dbPost.ID,
 		CreatedAt:   dbPost.CreatedAt,
 		UpdatedAt:   dbPost.UpdatedAt,
 		Title:       dbPost.Title,
-		Description: dbPost.Description,
+		Description: description,
 		PublishedAt: dbPost.PublishedAt,
 		Url:         dbPost.Url,
 		FeedID:      dbPost.FeedID,
