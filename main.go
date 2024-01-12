@@ -22,56 +22,57 @@ type apiConfig struct {
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Error loading .env file %v\n",err)
+		log.Fatalf("Error loading .env file %v\n", err)
 	}
 
-	portString := os.Getenv("PORT");
+	portString := os.Getenv("PORT")
 	if portString == "" {
 		log.Fatal("Port not found")
 	}
 
-	dbURL := os.Getenv("DB_URL");
+	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
 		log.Fatal("Port not found")
 	}
 
-	conn,err := sql.Open("postgres", dbURL)
+	conn, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Fatal("Error connecting to database",err)
+		log.Fatal("Error connecting to database", err)
 	}
-	
+
 	//converts the sql.DB object to a database.Queries object
 	queries := database.New(conn)
 
 	apiCfg := apiConfig{
 		DB: queries,
 	}
-	
+
 	router := chi.NewRouter()
 
 	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins : []string{"https://*","http://*"},
-		AllowedMethods : []string{"GET","POST","PUT","DELETE","OPTIONS"},
-		AllowedHeaders : []string{"*"},
-		ExposedHeaders: []string{"Link"},
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: false,
-		MaxAge: 300,
+		MaxAge:           300,
 	}))
 
 	v1Router := chi.NewRouter()
-	v1Router.Get("/healthz",handlerReadiness)
-	v1Router.Get("/err",handlerErr)
-	v1Router.Post("/users",apiCfg.handlerCreateUser)
-	v1Router.Get("/user",apiCfg.handlerGetUser)
+	v1Router.Get("/healthz", handlerReadiness)
+	v1Router.Get("/err", handlerErr)
+	v1Router.Post("/users", apiCfg.handlerCreateUser)
+	v1Router.Get("/user", apiCfg.middlewareAuth(apiCfg.handlerGetUser))
+	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.handlerCreateFeed))
 
-	router.Mount("/v1",v1Router)
+	router.Mount("/v1", v1Router)
 
 	srv := &http.Server{
 		Handler: router,
-		Addr: ":" + portString,
+		Addr:    ":" + portString,
 	}
 
-	log.Printf("Server starting on %v",portString)
+	log.Printf("Server starting on %v", portString)
 
 	er := srv.ListenAndServe()
 	if er != nil {
